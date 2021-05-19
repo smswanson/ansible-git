@@ -1,0 +1,168 @@
+---
+- name: Hosts configs
+  hosts: all
+  connection: local
+  #gather_facts: no
+
+
+#- name: Include vars of stuff.yaml into the 'stuff' variable (2.2).
+#  include_vars:
+#    file: epg.yaml
+#    name: stuff
+  vars:
+    base_dir: "../data-logical-topology/output-files/"
+    USER: 'admin'
+    PW: 'R0undt0w3r!'
+    APIC: '10.200.250.11'
+    #ansible_python_interpreter: '/usr/bin/python'
+
+  tasks:
+  - name: Converts csv to yml - Contract
+    command: 'python csv-to-yaml.py contract.csv' 
+  - name: Converts csv to yml - Contract to EPG
+    command: 'python csv-to-yaml.py contract-to-epg.csv'    
+  - name: Include vars of Contract.
+    include_vars:
+      file: contract.csv.yml
+      name: contract 
+  - name: Include vars of contract_to_epg.
+    include_vars:
+      file: contract-to-epg.csv.yml
+      name: contract_to_epg 
+  
+#  - name: Add new contracts
+#    aci_contract:
+#        host: "{{ APIC }}"
+#        username: "{{ USER }}"
+#        password: "{{ PW }}"
+#        validate_certs: no
+#        tenant: "{{ item.Tenant }}"
+#        contract: "{{ item.Contract }}"
+#        description: "{{ item.Desc }}"
+#        scope: "{{ item.Scope }}"
+#        state: present
+#    loop: "{{ contract.csv_data }}"
+#    when: item.Contract != ''
+#
+################################### create Filters and Filter Entries ####################################
+#  - name: Add new filters to tenants
+#    aci_filter:
+#      host: "{{ APIC }}"
+#      username: "{{ USER }}"
+#      password: "{{ PW }}"
+#      validate_certs: no
+#      filter: "{{ item.Filter }}"
+#      description: "{{ item.FilterDesc }}"
+#      tenant: "{{ item.Tenant }}"
+#      state: present
+#    delegate_to: localhost
+#    loop: "{{ contract.csv_data }}"
+#    when: item.Filter != ''
+#  
+#  - name: Add Filter Entries
+#    aci_filter_entry:
+#      host: "{{ APIC }}"
+#      username: "{{ USER }}"
+#      password: "{{ PW }}"
+#      validate_certs: no
+#      state: present
+#      entry: "{{ item.FilterEntry }}"
+#      tenant: "{{ item.Tenant }}"
+#      ether_type: "{{ item.EtherType }}"
+#      icmp_msg_type: "{{ item.ICMP }}"
+#      ip_protocol: "{{ item.Protocol }}"
+#      stateful: "{{ item.Stateful }}" 
+#      ### dst_port: "{{ item.DestStart }}"
+#      dst_port_start: "{{ item.DestStart }}"
+#      dst_port_end: "{{ item.DestEnd }}"     
+#      filter: "{{ item.Filter }}"
+#      descr: "{{ item.FilterEntryDesc }}"
+#    loop: "{{ contract.csv_data }}"
+#    when: item.Filter != ''
+#########################################################################################
+#####       
+#  - name: Add a new contract subject
+#    aci_contract_subject:
+#        host: "{{ APIC }}"
+#        username: "{{ USER }}"
+#        password: "{{ PW }}"
+#        validate_certs: no
+#        tenant: "{{ item.Tenant }}"
+#        contract: "{{ item.Contract }}"
+#        subject: "{{ item.Subject }}"
+#        description: "{{ item.SbjDesc }}"
+#        reverse_filter: yes
+#        priority: 'unspecified'
+#        dscp: unspecified
+#        state: present     
+#    loop: "{{ contract.csv_data }}"
+#    when: item.Subject != ''
+#
+#  - name: Add a new contract subject to filter binding
+#    aci_contract_subject_to_filter:
+#        host: "{{ APIC }}"
+#        username: "{{ USER }}"
+#        password: "{{ PW }}"
+#        validate_certs: no
+#        tenant: "{{ item.Tenant }}"
+#        contract: "{{ item.Contract }}"
+#        subject: "{{ item.Subject }}"
+#        filter: "{{ item.Filter }}"
+#        state: present 
+#    loop: "{{ contract.csv_data }}"   
+#    when: item.Subject != ''
+#    
+#     
+#####     
+#####  - name: Add contract to EPG binding L3Out
+#####    aci_epg_to_contract:
+#####       host: "{{ APIC }}"
+#####       username: "{{ USER }}"
+#####       password: "{{ PW }}"
+#####       validate_certs: no
+#####       tenant: DC-PROD
+#####       ap: DC-AP
+#####       epg: "{{ item.epg }}"
+#####       contract: DC-L3OUT-CON
+#####       contract_type: consumer
+#####       state: present      
+#####    loop:
+#####      - epg: DC-LEG-EPG
+#####      - epg: DC-TEST-EPG
+#####     
+#####
+  - name: Add contract to EPG binding Provider
+    aci_epg_to_contract:
+      host: "{{ APIC }}"
+      username: "{{ USER }}"
+      password: "{{ PW }}"
+      validate_certs: no
+      tenant: "{{ item.Tenant }}"
+      ap: "{{ item.AP }}"
+      epg: "{{ item.EPG }}"
+      contract: "{{ item.Contract }}"
+      contract_type: provider
+      state: present
+    loop: "{{ contract_to_epg.csv_data }}"
+    when: item.Provider == 'yes'
+ 
+####
+####      
+####      
+  - name: Add contract to EPG binding Consumer
+    aci_epg_to_contract:
+      host: "{{ APIC }}"
+      username: "{{ USER }}"
+      password: "{{ PW }}"
+      validate_certs: no
+      tenant: "{{ item.Tenant }}"
+      ap: "{{ item.AP }}"
+      epg: "{{ item.EPG }}"
+      contract: "{{ item.Contract }}"
+      contract_type: consumer
+      state: present
+    loop: "{{ contract_to_epg.csv_data }}"
+    when: item.Consumer == 'yes'
+####      - epg: DC-LEG-EPG
+####      - epg: DC-TEST-EPG 
+####
